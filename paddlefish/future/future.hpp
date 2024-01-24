@@ -1,32 +1,53 @@
 #pragma once
 
-#include <__coroutine/noop_coroutine_handle.h>
-#include <__coroutine/trivial_awaitables.h>
+#include <__coroutine/coroutine_handle.h>
 #include <coroutine>
 
 #include <paddlefish/unit.hpp>
+#include <type_traits>
 
 namespace paddlefish {
 
-template <class T = Unit>
+template <class T, class Alloc = std::allocator<std::byte>>
+class Promise;
+
+namespace detail {
+
+template <class T = Unit, class Alloc = std::allocator<std::byte>>
+auto make_future(Promise<T, Alloc>& promise) {
+  return Future(promise);
+}
+
+} // namespace detail
+
+template <class T = Unit, class Alloc = std::allocator<std::byte>>
 class Future {
-  struct FutureAwaiter {
-
-  };
-
-  class Promise {
-    auto initial_suspend() {
-      return std::suspend_never{};
-    }
-
-    auto final_suspend() {
-      return std::suspend_always{};
-    }
-  };
- public:
-  auto operator co_await() {
-    return FutureAwaiter{};
+public:
+  static Future from_promise(Promise<T, Alloc>& promise) {
+    Future result;
+    result.promise_ = &promise;
+    return result;
   }
+
+  // auto operator co_await() {
+  //   return FutureAwaiter{};
+  // }
+
+  void run() {
+    std::coroutine_handle<decltype(*promise_)>::from_promise(*promise_).resume();
+  }
+
+public:
+  Promise<T, Alloc>* promise_ = nullptr;
 };
 
 } // namespace paddlefish
+
+namespace std {
+
+template <class T, class Alloc, class... Args>
+struct coroutine_traits<paddlefish::Future<T, Alloc>, Args...> {
+  using promise_type = paddlefish::Promise<T, Alloc>;
+};
+
+} // namespace std
