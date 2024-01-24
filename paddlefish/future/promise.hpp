@@ -64,7 +64,7 @@ public:
       throw std::bad_exception();
     }
     if (value_.index() == kError) {
-      throw std::get<kError>(value_).ptr;
+      std::rethrow_exception(std::get<kError>(value_).ptr);
     }
     return std::get<kValue>(value_);
   }
