@@ -34,7 +34,13 @@ public:
   // }
 
   void run() {
-    std::coroutine_handle<decltype(*promise_)>::from_promise(*promise_).resume();
+    while (true) {
+      std::coroutine_handle<> handle = std::coroutine_handle<decltype(*promise_)>::from_promise(*promise_);
+      if (handle.done()) {
+        return;
+      }
+      handle.resume();
+    }
   }
 
 public:

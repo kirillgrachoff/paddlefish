@@ -1,5 +1,6 @@
 #pragma once
 
+#include <__coroutine/coroutine_handle.h>
 #include <coroutine>
 #include <cstddef>
 #include <exception>
@@ -32,13 +33,29 @@ public:
     Promise<T, Alloc>& promise;
   };
 
+private:
+  struct FinalSuspendAwaiter {
+    std::false_type await_ready() noexcept {
+      return {};
+    }
+
+    auto await_suspend(std::coroutine_handle<> handle) {
+      return promise.caller;
+    }
+
+    void await_resume() noexcept {
+    }
+
+    Promise<T, Alloc>& promise;
+  };
+
 public:
   auto initial_suspend() noexcept {
     return std::suspend_always{};
   }
 
   auto final_suspend() noexcept {
-    return std::suspend_never{};
+    return FinalSuspendAwaiter{*this};
   }
 
   void return_value(T value) {
