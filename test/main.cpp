@@ -11,8 +11,10 @@ paddlefish::Future<> Main() {
   auto f = Calculate(20);
   std::cout << "co_await... ";
   int v = co_await f;
+  std::cout << " = " << v << std::endl;
+  std::cout << "co_await... ";
   int vv = co_await Calculate(40);
-  std::cout << "= " << v << std::endl;
+  std::cout << " = " << vv << std::endl;
   std::cout << "Resumed successfully" << std::endl;
   co_return {};
 }
