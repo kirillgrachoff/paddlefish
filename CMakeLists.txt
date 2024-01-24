@@ -7,4 +7,4 @@ project(paddlefish)
 include_directories(${CMAKE_SOURCE_DIR})
 
 add_subdirectory(paddlefish)
-
+add_subdirectory(test)
