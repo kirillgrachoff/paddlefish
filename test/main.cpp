@@ -52,7 +52,7 @@ paddlefish::Future<> loop() {
     if (i % 100 == 0) {
       std::cout << "loop " << i << std::endl;
     }
-    co_await paddlefish::sched_yield();
+    co_await paddlefish::runtime::sched_yield();
   }
   co_return {};
 }

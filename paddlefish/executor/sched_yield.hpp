@@ -2,10 +2,10 @@
 
 #include <paddlefish/runtime.hpp>
 
-namespace paddlefish {
+namespace paddlefish::runtime {
 
 auto sched_yield() {
   return runtime::detail::YieldAwaiter{};
 }
 
-}  // namespace paddlefish
+}  // namespace paddlefish::runtime
