@@ -20,9 +20,7 @@ std::coroutine_handle<> substitute(std::coroutine_handle<> handle) {
 
 void utilize() {
   for (uint8_t iteration = 0; true; ++iteration) {
-    if (iteration == 0) {
-      std::cerr << "Runtime iteration" << std::endl;
-    }
+    std::cerr << "Runtime iteration" << std::endl;
     auto handle = take();
     if (!handle.has_value()) {
       return;

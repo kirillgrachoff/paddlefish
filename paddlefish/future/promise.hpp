@@ -7,64 +7,43 @@
 #include <memory>
 #include <optional>
 
-#include <paddlefish/executor/executor.hpp>
-#include <paddlefish/future/future.hpp>
 #include <paddlefish/unit.hpp>
+#include <type_traits>
 
 namespace paddlefish {
 
-template <class T = Unit, class Alloc>
+class PromiseValueIsNotSetError : public std::exception {
+  const char* what() const noexcept override {
+    return "Promise::get_value() called; value is not set";
+  }
+};
+
+template <class T, class Future, class Alloc>
 class Promise {
- public:
-  struct FutureAwaiter {
-    std::false_type await_ready() noexcept {
-      return {};
-    }
-
-    auto await_suspend(std::coroutine_handle<> handle) {
-      promise.caller_ = handle;
-      paddlefish::runtime::suspend(std::coroutine_handle<decltype(promise)>::from_promise(promise));
-      return *paddlefish::runtime::take();
-    }
-
-    T await_resume() {
-      return std::move(promise).get_value();
-    }
-
-    Promise<T, Alloc>& promise;
-  };
-
- private:
-  struct FinalSuspendAwaiter {
-    std::false_type await_ready() noexcept {
-      return {};
-    }
-
-    auto await_suspend(std::coroutine_handle<> handle) {
-      return promise.caller_;
-    }
-
-    void await_resume() noexcept {
-    }
-
-    Promise<T, Alloc>& promise;
-  };
+  using FinalSuspendAwaiter = typename Future::FinalSuspendAwaiter;
 
  public:
+  Promise() = default;
+  Promise(Promise&&) = default;
+  Promise& operator=(Promise&&) = default;
+
+  Promise(const Promise&) = delete;
+  Promise& operator=(const Promise&) = delete;
+
   auto initial_suspend() noexcept {
     return std::suspend_always{};
   }
 
   auto final_suspend() noexcept {
-    return FinalSuspendAwaiter{*this};
+    return final_suspend_awaiter_;
   }
 
   void return_value(T value) {
     value_.template emplace<kValue>(std::move(value));
   }
 
-  Future<T, Alloc> get_return_object() {
-    return Future<T, Alloc>::from_promise(*this);
+  Future get_return_object() {
+    return Future::from_promise(*this);
   }
 
   void unhandled_exception() {
@@ -72,19 +51,13 @@ class Promise {
     value_.template emplace<kError>(Error{ptr});
   }
 
-  template <class U, class Alloc2>
-  static auto await_transform(const Future<U, Alloc2>& future) {
-    return typename Promise<U, Alloc2>::FutureAwaiter{*future.promise_};
-  }
-
-  template <class U>
-  static auto await_transform(const U& value) {
-    return value;
+  void set_final_suspend_awaiter(FinalSuspendAwaiter awaiter) noexcept {
+    final_suspend_awaiter_ = std::move(awaiter);
   }
 
   T get_value() && {
     if (value_.index() == kEmpty) {
-      throw std::bad_exception();
+      throw PromiseValueIsNotSetError();
     }
     if (value_.index() == kError) {
       std::rethrow_exception(std::get<kError>(value_).ptr);
@@ -93,7 +66,7 @@ class Promise {
   }
 
  private:
-  std::coroutine_handle<> caller_ = std::noop_coroutine();
+  FinalSuspendAwaiter final_suspend_awaiter_;
 
   struct Error {
     std::exception_ptr ptr;
