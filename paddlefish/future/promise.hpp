@@ -21,7 +21,7 @@ class Promise {
     }
 
     auto await_suspend(std::coroutine_handle<> handle) {
-      promise.caller = handle;
+      promise.caller_ = handle;
       return std::coroutine_handle<decltype(promise)>::from_promise(promise);
     }
 
@@ -39,7 +39,7 @@ class Promise {
     }
 
     auto await_suspend(std::coroutine_handle<> handle) {
-      return promise.caller;
+      return promise.caller_;
     }
 
     void await_resume() noexcept {
@@ -86,7 +86,7 @@ class Promise {
   }
 
  private:
-  std::coroutine_handle<> caller = std::noop_coroutine();
+  std::coroutine_handle<> caller_ = std::noop_coroutine();
 
   struct Error {
     std::exception_ptr ptr;

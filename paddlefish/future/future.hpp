@@ -49,6 +49,7 @@ namespace std {
 
 template <class T, class Alloc, class... Args>
 struct coroutine_traits<paddlefish::Future<T, Alloc>, Args...> {
+  // NOLINTNEXTLINE
   using promise_type = paddlefish::Promise<T, Alloc>;
 };
 
