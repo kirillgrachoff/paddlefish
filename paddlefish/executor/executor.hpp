@@ -3,11 +3,9 @@
 #include <coroutine>
 #include <optional>
 
-#include <paddlefish/future/future.hpp>
-
 namespace paddlefish::runtime {
 
-void suspend(std::coroutine_handle<>);
+void schedule(std::coroutine_handle<>);
 
 std::optional<std::coroutine_handle<>> take();
 
@@ -31,17 +29,5 @@ struct YieldAwaiter {
 };
 
 }  // namespace detail
-
-
-template <class Alloc>
-void go(Future<Unit, Alloc> f) {
-  suspend(std::move(f).into_handle());
-}
-
-template <class Alloc>
-void block_on(Future<Unit, Alloc> f) {
-  go(std::move(f));
-  utilize();
-}
 
 }  // namespace paddlefish::runtime

@@ -6,7 +6,7 @@ namespace paddlefish::runtime {
 
 static thread_local FifoScheduler scheduler;
 
-void suspend(std::coroutine_handle<> handle) {
+void schedule(std::coroutine_handle<> handle) {
   scheduler.submit(handle);
 }
 
