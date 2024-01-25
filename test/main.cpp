@@ -2,7 +2,10 @@
 
 #include <paddlefish/future.hpp>
 #include <paddlefish/runtime.hpp>
+#include "paddlefish/executor/sched_yield.hpp"
 #include "paddlefish/future/future.hpp"
+
+// #include <paddlefish/future/when_all.hpp>
 
 paddlefish::Future<int> calculate(int value) {
   std::cout << "Calculating " << value;
@@ -41,11 +44,21 @@ paddlefish::Future<> sequence() {
 // paddlefish::Future<> parallel() {
 //   auto a = calculate(10);
 //   auto b = calculate(20);
-//   auto [a_r, b_r] = co_await paddlefish::when_all(a, b);
+//   auto [a_r, b_r] = paddlefish::when_all(a, b);
 // }
+
+paddlefish::Future<> loop() {
+  for (size_t i = 0; i < 1000; ++i) {
+    if (i % 100 == 0) {
+      std::cout << "loop " << i << std::endl;
+    }
+    co_await paddlefish::sched_yield();
+  }
+  co_return {};
+}
 
 int main() {
   std::cout << "Run" << std::endl;
-  paddlefish::runtime::block_on(sequence());
+  paddlefish::runtime::block_on(loop());
   std::cout << "End" << std::endl;
 }

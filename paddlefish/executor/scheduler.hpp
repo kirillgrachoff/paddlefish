@@ -20,6 +20,14 @@ public:
     }
   }
 
+  std::coroutine_handle<> substitute(std::coroutine_handle<> handle) {
+    if (q_.empty()) {
+      return handle;
+    }
+    submit(handle);
+    return *take();
+  }
+
 private:
   std::deque<std::coroutine_handle<>> q_;
 };

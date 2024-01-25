@@ -12,4 +12,8 @@ std::optional<std::coroutine_handle<>> take() {
   return scheduler.take();
 }
 
+std::coroutine_handle<> substitute(std::coroutine_handle<> handle) {
+  return scheduler.substitute(handle);
+}
+
 }  // namespace paddlefish::runtime
