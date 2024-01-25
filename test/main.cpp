@@ -2,6 +2,7 @@
 
 #include <paddlefish/future.hpp>
 #include <paddlefish/runtime.hpp>
+#include <stdexcept>
 #include "paddlefish/executor/sched_yield.hpp"
 #include "paddlefish/future/future.hpp"
 
@@ -57,8 +58,24 @@ paddlefish::Future<> loop() {
   co_return {};
 }
 
+paddlefish::Future<> exceptional() {
+  throw std::runtime_error("exception from exceptional");
+
+  co_return {};
+}
+
+paddlefish::Future<> noexceptional() {
+  try {
+    co_await exceptional();
+  } catch (std::runtime_error& ex) {
+    std::cerr << "exception catched :: OK" << std::endl;
+  }
+
+  co_return {};
+}
+
 int main() {
   std::cout << "Run" << std::endl;
-  paddlefish::runtime::block_on(loop());
+  paddlefish::runtime::block_on(noexceptional());
   std::cout << "End" << std::endl;
 }
