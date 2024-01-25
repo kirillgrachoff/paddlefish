@@ -7,8 +7,9 @@
 #include <memory>
 #include <optional>
 
-#include <paddlefish/unit.hpp>
+#include <paddlefish/executor/executor.hpp>
 #include <paddlefish/future/future.hpp>
+#include <paddlefish/unit.hpp>
 
 namespace paddlefish {
 
@@ -22,7 +23,8 @@ class Promise {
 
     auto await_suspend(std::coroutine_handle<> handle) {
       promise.caller_ = handle;
-      return std::coroutine_handle<decltype(promise)>::from_promise(promise);
+      paddlefish::runtime::suspend(std::coroutine_handle<decltype(promise)>::from_promise(promise));
+      return *paddlefish::runtime::take();
     }
 
     T await_resume() {
@@ -73,6 +75,11 @@ class Promise {
   template <class U, class Alloc2>
   static auto await_transform(const Future<U, Alloc2>& future) {
     return typename Promise<U, Alloc2>::FutureAwaiter{*future.promise_};
+  }
+
+  template <class U>
+  static auto await_transform(const U& value) {
+    return value;
   }
 
   T get_value() && {

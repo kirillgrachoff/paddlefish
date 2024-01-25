@@ -10,15 +10,6 @@ namespace paddlefish {
 template <class T, class Alloc = std::allocator<std::byte>>
 class Promise;
 
-namespace detail {
-
-template <class T = Unit, class Alloc = std::allocator<std::byte>>
-auto make_future(Promise<T, Alloc>& promise) {
-  return Future(promise);
-}
-
-}  // namespace detail
-
 template <class T = Unit, class Alloc = std::allocator<std::byte>>
 class Future {
  public:
