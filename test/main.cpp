@@ -1,6 +1,8 @@
 #include <iostream>
 
 #include <paddlefish/future.hpp>
+#include <paddlefish/runtime.hpp>
+#include "paddlefish/future/future.hpp"
 
 paddlefish::Future<int> calculate(int value) {
   std::cout << "Calculating " << value;
@@ -11,7 +13,15 @@ paddlefish::Future<std::unique_ptr<int>> allocate(int value) {
   co_return std::make_unique<int>(value);
 }
 
-paddlefish::Future<> app_main() {
+paddlefish::Future<> recursive(int n = 0) {
+  if (n == 1000) {
+    co_return {};
+  }
+  co_await recursive(n + 1);
+  co_return {};
+}
+
+paddlefish::Future<> sequence() {
   auto f = calculate(20);
   std::cout << "co_await... ";
   int v = co_await f;
@@ -22,13 +32,20 @@ paddlefish::Future<> app_main() {
   auto vvv = co_await allocate(50);
   std::cout << *vvv << std::endl;
   std::cout << "Resumed successfully" << std::endl;
+  std::cout << "Recursive start" << std::endl;
+  co_await recursive();
+  std::cout << "Recursive end" << std::endl;
   co_return {};
 }
 
+// paddlefish::Future<> parallel() {
+//   auto a = calculate(10);
+//   auto b = calculate(20);
+//   auto [a_r, b_r] = co_await paddlefish::when_all(a, b);
+// }
+
 int main() {
-  auto ptr = new int(10);
-  auto f = app_main();
   std::cout << "Run" << std::endl;
-  f.run();
+  paddlefish::runtime::block_on(sequence());
   std::cout << "End" << std::endl;
 }
