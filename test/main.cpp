@@ -45,7 +45,7 @@ paddlefish::Future<> noexceptional() {
   try {
     co_await exceptional();
   } catch (std::runtime_error& ex) {
-    std::cerr << "exception catched :: OK" << std::endl;
+    std::cout << "exception catched :: OK" << std::endl;
   }
 
   co_return {};
