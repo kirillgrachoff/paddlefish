@@ -1,6 +1,5 @@
 #pragma once
 
-#include <__coroutine/coroutine_handle.h>
 #include <coroutine>
 #include <cstddef>
 #include <exception>
@@ -15,7 +14,7 @@ namespace paddlefish {
 
 template <class T = Unit, class Alloc>
 class Promise {
-public:
+ public:
   struct FutureAwaiter {
     std::false_type await_ready() noexcept {
       return {};
@@ -27,13 +26,13 @@ public:
     }
 
     T await_resume() {
-      return promise.get_value();
+      return std::move(promise).get_value();
     }
 
     Promise<T, Alloc>& promise;
   };
 
-private:
+ private:
   struct FinalSuspendAwaiter {
     std::false_type await_ready() noexcept {
       return {};
@@ -49,7 +48,7 @@ private:
     Promise<T, Alloc>& promise;
   };
 
-public:
+ public:
   auto initial_suspend() noexcept {
     return std::suspend_always{};
   }
@@ -76,17 +75,17 @@ public:
     return typename Promise<U, Alloc2>::FutureAwaiter{*future.promise_};
   }
 
-  T get_value() {
+  T get_value() && {
     if (value_.index() == kEmpty) {
       throw std::bad_exception();
     }
     if (value_.index() == kError) {
       std::rethrow_exception(std::get<kError>(value_).ptr);
     }
-    return std::get<kValue>(value_);
+    return std::get<kValue>(std::move(value_));
   }
 
-private:
+ private:
   std::coroutine_handle<> caller = std::noop_coroutine();
 
   struct Error {
@@ -99,4 +98,4 @@ private:
   std::variant<Unit, T, Error> value_;
 };
 
-} // namespace paddlefish
+}  // namespace paddlefish

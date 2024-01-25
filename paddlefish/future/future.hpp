@@ -1,10 +1,9 @@
 #pragma once
 
-#include <__coroutine/coroutine_handle.h>
 #include <coroutine>
+#include <type_traits>
 
 #include <paddlefish/unit.hpp>
-#include <type_traits>
 
 namespace paddlefish {
 
@@ -18,24 +17,21 @@ auto make_future(Promise<T, Alloc>& promise) {
   return Future(promise);
 }
 
-} // namespace detail
+}  // namespace detail
 
 template <class T = Unit, class Alloc = std::allocator<std::byte>>
 class Future {
-public:
+ public:
   static Future from_promise(Promise<T, Alloc>& promise) {
     Future result;
     result.promise_ = &promise;
     return result;
   }
 
-  // auto operator co_await() {
-  //   return FutureAwaiter{};
-  // }
-
   void run() {
     while (true) {
-      std::coroutine_handle<> handle = std::coroutine_handle<decltype(*promise_)>::from_promise(*promise_);
+      std::coroutine_handle<> handle =
+          std::coroutine_handle<decltype(*promise_)>::from_promise(*promise_);
       if (handle.done()) {
         return;
       }
@@ -43,11 +39,11 @@ public:
     }
   }
 
-public:
+ public:
   Promise<T, Alloc>* promise_ = nullptr;
 };
 
-} // namespace paddlefish
+}  // namespace paddlefish
 
 namespace std {
 
@@ -56,4 +52,4 @@ struct coroutine_traits<paddlefish::Future<T, Alloc>, Args...> {
   using promise_type = paddlefish::Promise<T, Alloc>;
 };
 
-} // namespace std
+}  // namespace std
