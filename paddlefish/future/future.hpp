@@ -28,15 +28,8 @@ class Future {
     return result;
   }
 
-  void run() {
-    while (true) {
-      std::coroutine_handle<> handle =
-          std::coroutine_handle<decltype(*promise_)>::from_promise(*promise_);
-      if (handle.done()) {
-        return;
-      }
-      handle.resume();
-    }
+  decltype(auto) into_handle() && {
+    return std::coroutine_handle<decltype(*promise_)>::from_promise(*promise_);
   }
 
  public:
