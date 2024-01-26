@@ -1,1 +1,1 @@
-add_library(runtime executor.cpp)
+add_library(runtime runtime.cpp)

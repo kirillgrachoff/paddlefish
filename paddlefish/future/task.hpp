@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-#include <paddlefish/executor/executor.hpp>
+#include <paddlefish/executor/api.hpp>
 #include <paddlefish/future/fiber.hpp>
 #include <paddlefish/future/final_suspend_awaiter.hpp>
 
