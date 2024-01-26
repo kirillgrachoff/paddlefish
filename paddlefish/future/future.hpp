@@ -125,7 +125,9 @@ class Future<void, Alloc> {
 };
 
 template <class Alloc = std::allocator<std::byte>>
-using Task = Future<void, Alloc>;
+using TaskAlloc = Future<void, Alloc>;
+
+using Task = TaskAlloc<>;
 
 }  // namespace paddlefish
 
