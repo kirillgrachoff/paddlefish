@@ -5,36 +5,41 @@
 #include <iostream>
 
 #include <paddlefish/executor/executor.hpp>
+#include <paddlefish/future/fiber.hpp>
 #include <paddlefish/future/promise.hpp>
 #include <paddlefish/unit.hpp>
 
 namespace paddlefish {
 
+namespace detail {
+
+struct FinalSuspendAwaiter {
+  std::false_type await_ready() noexcept {
+    return {};
+  }
+
+  auto await_suspend(std::coroutine_handle<> handle) noexcept {
+    return caller;
+  }
+
+  void await_resume() noexcept {
+  }
+
+  std::coroutine_handle<> caller = std::noop_coroutine();
+};
+
+}  // namespace detail
+
 template <class T = Unit, class Alloc = std::allocator<std::byte>>
 class Future {
  public:
-  // NOLINTNEXTLINE
-  using promise_type = Promise<T, Future<T, Alloc>, Alloc>;
+  using PromiseType = Promise<T, Future<T, Alloc>, Alloc>;
 
  public:
-  struct FinalSuspendAwaiter {
-    std::false_type await_ready() noexcept {
-      return {};
-    }
-
-    auto await_suspend(std::coroutine_handle<> handle) noexcept {
-      // runtime::schedule(caller);
-      return caller;
-    }
-
-    void await_resume() noexcept {
-    }
-
-    std::coroutine_handle<> caller;
-  };
+  using FinalSuspendAwaiter = detail::FinalSuspendAwaiter;
 
  private:
-  explicit Future(promise_type& promise) : promise_(promise) {
+  explicit Future(PromiseType& promise) : promise_(promise) {
   }
 
  public:
@@ -45,7 +50,7 @@ class Future {
   Future(Future&&) = default;
   Future& operator=(Future&&) = default;
 
-  static Future from_promise(promise_type& promise) {
+  static Future from_promise(PromiseType& promise) {
     return Future(promise);
   }
 
@@ -65,18 +70,62 @@ class Future {
   }
 
   decltype(auto) into_handle() && {
-    promise_.set_final_suspend_awaiter(
-        FinalSuspendAwaiter{std::noop_coroutine()});
-    return std::coroutine_handle<
-        std::remove_reference_t<decltype(promise_)>>::from_promise(promise_);
+    return std::coroutine_handle<PromiseType>::from_promise(promise_);
   }
 
  private:
-  promise_type& promise_;
+  PromiseType& promise_;
+};
+
+template <class Alloc>
+class Future<void, Alloc> {
+ public:
+  using PromiseType = Fiber<Future<void, Alloc>, Alloc>;
+
+ public:
+  using FinalSuspendAwaiter = detail::FinalSuspendAwaiter;
+
+ private:
+  explicit Future(PromiseType& promise) : promise_(promise) {
+  }
+
+ public:
+  Future() = delete;
+  Future(const Future&) = delete;
+  Future& operator=(const Future&) = delete;
+
+  Future(Future&&) = default;
+  Future& operator=(Future&&) = default;
+
+  static Future from_promise(PromiseType& promise) {
+    return Future(promise);
+  }
+
+  std::false_type await_ready() noexcept {
+    return {};
+  }
+
+  auto await_suspend(std::coroutine_handle<> handle) {
+    promise_.set_final_suspend_awaiter(FinalSuspendAwaiter{handle});
+    auto promise_handle =
+        std::coroutine_handle<decltype(promise_)>::from_promise(promise_);
+    return paddlefish::runtime::maybe_schedule(promise_handle);
+  }
+
+  void await_resume() {
+    std::move(promise_).get_void();
+  }
+
+  decltype(auto) into_handle() && {
+    return std::coroutine_handle<PromiseType>::from_promise(promise_);
+  }
+
+ private:
+  PromiseType& promise_;
 };
 
 template <class Alloc = std::allocator<std::byte>>
-using Task = Future<Unit, Alloc>;
+using Task = Future<void, Alloc>;
 
 }  // namespace paddlefish
 
@@ -85,7 +134,7 @@ namespace std {
 template <class T, class Alloc, class... Args>
 struct coroutine_traits<paddlefish::Future<T, Alloc>, Args...> {
   // NOLINTNEXTLINE
-  using promise_type = typename paddlefish::Future<T, Alloc>::promise_type;
+  using promise_type = typename paddlefish::Future<T, Alloc>::PromiseType;
 };
 
 }  // namespace std
