@@ -67,6 +67,7 @@ class Future {
   }
 
   decltype(auto) into_handle() && {
+    promise_.set_final_suspend_awaiter(FinalSuspendAwaiter{std::noop_coroutine()});
     return std::coroutine_handle<std::remove_reference_t<decltype(promise_)>>::from_promise(promise_);
   }
 
