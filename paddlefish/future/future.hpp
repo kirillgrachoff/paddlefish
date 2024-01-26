@@ -59,7 +59,7 @@ class Future {
   auto await_suspend(std::coroutine_handle<> handle) {
     promise_.set_final_suspend_awaiter(FinalSuspendAwaiter{handle});
     auto promise_handle = std::coroutine_handle<decltype(promise_)>::from_promise(promise_);
-    return paddlefish::runtime::substitute(promise_handle);
+    return paddlefish::runtime::maybe_schedule(promise_handle);
   }
 
   T await_resume() {

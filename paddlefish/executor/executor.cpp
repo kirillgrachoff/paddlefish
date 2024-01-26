@@ -1,4 +1,4 @@
-#include "scheduler.hpp"
+#include "fifo_scheduler.hpp"
 
 #include <iostream>
 
@@ -14,7 +14,7 @@ std::optional<std::coroutine_handle<>> take() {
   return scheduler.take();
 }
 
-std::coroutine_handle<> substitute(std::coroutine_handle<> handle) {
+std::coroutine_handle<> maybe_schedule(std::coroutine_handle<> handle) {
   return scheduler.substitute(handle);
 }
 
