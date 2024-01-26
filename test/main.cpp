@@ -3,10 +3,9 @@
 #include <paddlefish/future.hpp>
 #include <paddlefish/runtime.hpp>
 #include <stdexcept>
-#include "paddlefish/executor/sched_yield.hpp"
-#include "paddlefish/future/future.hpp"
 
-// #include <paddlefish/future/when_all.hpp>
+#include <paddlefish/executor/sched_yield.hpp>
+#include <paddlefish/future/future.hpp>
 
 paddlefish::Future<int> calculate(int value) {
   std::cout << "Calculating " << value;
@@ -17,33 +16,42 @@ paddlefish::Future<std::unique_ptr<int>> allocate(int value) {
   co_return std::make_unique<int>(value);
 }
 
-paddlefish::Future<> recursive(int n = 0) {
+paddlefish::Task recursive(int n = 0) {
   if (n == 1000) {
-    co_return {};
+    std::cout << "recursive: n = " << n << std::endl;
+    co_return;
   }
   co_await recursive(n + 1);
-  co_return {};
 }
 
-paddlefish::Future<> loop() {
+paddlefish::Task loop() {
   for (size_t i = 0; i < 1000; ++i) {
     if (i % 100 == 0) {
       std::cout << "loop " << i << std::endl;
     }
     co_await paddlefish::runtime::sched_yield();
   }
-  co_return {};
 }
 
-paddlefish::Future<> exceptional() {
+paddlefish::Future<> exceptional_future() {
   throw std::runtime_error("exception from exceptional");
 
   co_return {};
 }
 
+paddlefish::Task exceptional_task() {
+  throw std::runtime_error("exception from exceptional");
+}
+
 paddlefish::Future<> noexceptional() {
   try {
-    co_await exceptional();
+    co_await exceptional_future();
+  } catch (std::runtime_error& ex) {
+    std::cout << "exception catched :: OK" << std::endl;
+  }
+
+  try {
+    co_await exceptional_task();
   } catch (std::runtime_error& ex) {
     std::cout << "exception catched :: OK" << std::endl;
   }
@@ -51,7 +59,11 @@ paddlefish::Future<> noexceptional() {
   co_return {};
 }
 
-paddlefish::Future<> sequence() {
+paddlefish::Future<void> check() {
+  co_await recursive(1000);
+}
+
+paddlefish::Task sequence() {
   auto f = calculate(20);
   std::cout << "co_await... ";
   int v = co_await f;
@@ -71,7 +83,7 @@ paddlefish::Future<> sequence() {
   std::cout << "Exceptional start" << std::endl;
   co_await noexceptional();
   std::cout << "Exceptional end" << std::endl;
-  co_return {};
+  co_await check();
 }
 
 // paddlefish::Future<> parallel() {
