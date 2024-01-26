@@ -38,22 +38,22 @@ Task recursive(int start) {
 Task loop(auto id, size_t n) {
   for (size_t i = 0; i < n; ++i) {
     std::cerr << "loop { id " << id << " } { i " << i << " } log" << std::endl;
-    co_await paddlefish::runtime::sched_yield();
+    co_await runtime::sched_yield();
   }
 }
 
-paddlefish::Future<> exceptional_future() {
+Future<> exceptional_future() {
   throw std::runtime_error("exception from exceptional");
 
   co_return {};
 }
 
-paddlefish::Task exceptional_task() {
+Task exceptional_task() {
   throw std::runtime_error("exception from exceptional");
   co_return;  // This is necessary
 }
 
-paddlefish::Future<> noexceptional() {
+Future<> noexceptional() {
   try {
     co_await exceptional_task();
   } catch (std::runtime_error& ex) {
@@ -69,11 +69,11 @@ paddlefish::Future<> noexceptional() {
   co_return {};
 }
 
-paddlefish::Task check() {
+Task check() {
   co_await recursive(1000);
 }
 
-paddlefish::Task sequence() {
+Task sequence() {
   auto f = calculate(20);
   std::cerr << "co_await... ";
   int v = co_await f;
@@ -86,23 +86,23 @@ paddlefish::Task sequence() {
   std::cerr << "Resumed successfully" << std::endl;
 }
 
-paddlefish::Task concurrent() {
-  paddlefish::runtime::go(recursive(32));
-  paddlefish::runtime::go(recursive(25));
+Task concurrent() {
+  runtime::go(recursive(32));
+  runtime::go(recursive(25));
   co_return;
 }
 
-// paddlefish::Future<> parallel() {
+// Future<> parallel() {
 //   auto a = calculate(10);
 //   auto b = calculate(20);
-//   auto [a_r, b_r] = paddlefish::when_all(a, b);
+//   auto [a_r, b_r] = when_all(a, b);
 // }
 
-void run_test(paddlefish::Task test) {
+void run_test(Task test) {
   static size_t number = 0;
   ++number;
   std::cout << "-- Run test " << number << std::endl;
-  paddlefish::runtime::block_on(std::move(test));
+  runtime::block_on(std::move(test));
   std::cout << "-- End test " << number << std::endl;
 }
 
