@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <iostream>
 
 #include <paddlefish/future.hpp>
@@ -16,12 +17,19 @@ paddlefish::Future<std::unique_ptr<int>> allocate(int value) {
   co_return std::make_unique<int>(value);
 }
 
-paddlefish::Task recursive(int n = 0) {
-  if (n == 1000) {
-    std::cout << "recursive: n = " << n << std::endl;
+paddlefish::Task recursive_impl(int start, int n) {
+  if (n == 0) {
+    std::cout << "recursive end: n = " << start << std::endl;
     co_return;
   }
-  co_await recursive(n + 1);
+  co_await recursive_impl(start, n - 1);
+}
+
+paddlefish::Task recursive(int start) {
+  auto id = std::rand();
+  std::cout << "recursive { id " << id << " } start" << std::endl;
+  co_await recursive_impl(start, start);
+  std::cout << "recursive { id " << id << " } end" << std::endl;
 }
 
 paddlefish::Task loop() {
@@ -41,17 +49,18 @@ paddlefish::Future<> exceptional_future() {
 
 paddlefish::Task exceptional_task() {
   throw std::runtime_error("exception from exceptional");
+  // co_return; // This is not necessary
 }
 
 paddlefish::Future<> noexceptional() {
   try {
-    co_await exceptional_future();
+    co_await exceptional_task();
   } catch (std::runtime_error& ex) {
     std::cout << "exception catched :: OK" << std::endl;
   }
 
   try {
-    co_await exceptional_task();
+    co_await exceptional_future();
   } catch (std::runtime_error& ex) {
     std::cout << "exception catched :: OK" << std::endl;
   }
@@ -59,12 +68,13 @@ paddlefish::Future<> noexceptional() {
   co_return {};
 }
 
-paddlefish::Future<void> check() {
+paddlefish::Task check() {
   co_await recursive(1000);
 }
 
 paddlefish::Task sequence() {
   auto f = calculate(20);
+  paddlefish::runtime::go(recursive(1000));
   std::cout << "co_await... ";
   int v = co_await f;
   std::cout << " = " << v << std::endl;
@@ -75,7 +85,7 @@ paddlefish::Task sequence() {
   std::cout << *vvv << std::endl;
   std::cout << "Resumed successfully" << std::endl;
   std::cout << "Recursive start" << std::endl;
-  co_await recursive();
+  co_await recursive(100);
   std::cout << "Recursive end" << std::endl;
   std::cout << "Loop start" << std::endl;
   co_await loop();
@@ -86,6 +96,12 @@ paddlefish::Task sequence() {
   co_await check();
 }
 
+paddlefish::Task concurrent() {
+  paddlefish::runtime::go(recursive(100));
+  paddlefish::runtime::go(recursive(100));
+  co_return;
+}
+
 // paddlefish::Future<> parallel() {
 //   auto a = calculate(10);
 //   auto b = calculate(20);
@@ -94,6 +110,6 @@ paddlefish::Task sequence() {
 
 int main() {
   std::cout << "Run" << std::endl;
-  paddlefish::runtime::block_on(sequence());
+  paddlefish::runtime::block_on(noexceptional());
   std::cout << "End" << std::endl;
 }
