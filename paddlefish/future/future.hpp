@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include <paddlefish/executor/executor.hpp>
+#include <paddlefish/future/promise.hpp>
 #include <paddlefish/unit.hpp>
 
 namespace paddlefish {
@@ -36,9 +37,8 @@ class Future {
   };
 
  private:
-  explicit Future(promise_type& promise)
-    : promise_(promise)
-  {}
+  explicit Future(promise_type& promise) : promise_(promise) {
+  }
 
  public:
   Future() = delete;
@@ -58,7 +58,8 @@ class Future {
 
   auto await_suspend(std::coroutine_handle<> handle) {
     promise_.set_final_suspend_awaiter(FinalSuspendAwaiter{handle});
-    auto promise_handle = std::coroutine_handle<decltype(promise_)>::from_promise(promise_);
+    auto promise_handle =
+        std::coroutine_handle<decltype(promise_)>::from_promise(promise_);
     return paddlefish::runtime::maybe_schedule(promise_handle);
   }
 
@@ -67,8 +68,10 @@ class Future {
   }
 
   decltype(auto) into_handle() && {
-    promise_.set_final_suspend_awaiter(FinalSuspendAwaiter{std::noop_coroutine()});
-    return std::coroutine_handle<std::remove_reference_t<decltype(promise_)>>::from_promise(promise_);
+    promise_.set_final_suspend_awaiter(
+        FinalSuspendAwaiter{std::noop_coroutine()});
+    return std::coroutine_handle<
+        std::remove_reference_t<decltype(promise_)>>::from_promise(promise_);
   }
 
  private:
@@ -88,4 +91,4 @@ struct coroutine_traits<paddlefish::Future<T, Alloc>, Args...> {
   using promise_type = typename paddlefish::Future<T, Alloc>::promise_type;
 };
 
-}
+}  // namespace std

@@ -6,9 +6,9 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <type_traits>
 
 #include <paddlefish/unit.hpp>
-#include <type_traits>
 
 namespace paddlefish {
 
