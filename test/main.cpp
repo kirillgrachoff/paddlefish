@@ -6,36 +6,38 @@
 #include <paddlefish/future.hpp>
 #include <paddlefish/runtime.hpp>
 
-paddlefish::Future<int> calculate(int value) {
-  std::cout << "Calculating " << value;
+using namespace paddlefish;  // NOLINT
+
+Future<int> calculate(int value) {
+  std::cerr << "Calculating " << value;
   co_return value;
 }
 
-paddlefish::Future<std::unique_ptr<int>> allocate(int value) {
+Future<std::unique_ptr<int>> allocate(int value) {
   co_return std::make_unique<int>(value);
 }
 
-paddlefish::Task recursive_impl(auto id, int start, int n) {
+Task recursive_impl(auto id, int start, int n) {
   if (n == 0) {
-    std::cout << "recursive { id " << id << " } { n " << n << " } end" << std::endl;
+    std::cerr << "recursive { id " << id << " } { n " << n << " } end"
+              << std::endl;
     co_return;
   }
-  std::cout << "recursive { id " << id << " } { n " << n << " } log" << std::endl;
+  std::cerr << "recursive { id " << id << " } { n " << n << " } log"
+            << std::endl;
   co_await recursive_impl(id, start, n - 1);
 }
 
-paddlefish::Task recursive(int start) {
+Task recursive(int start) {
   auto id = std::rand();
-  std::cout << "recursive { id " << id << " } start" << std::endl;
+  std::cerr << "recursive { id " << id << " } start" << std::endl;
   co_await recursive_impl(id, start, start);
-  std::cout << "recursive { id " << id << " } end" << std::endl;
+  std::cerr << "recursive { id " << id << " } end" << std::endl;
 }
 
-paddlefish::Task loop() {
-  for (size_t i = 0; i < 1000; ++i) {
-    if (i % 100 == 0) {
-      std::cout << "loop " << i << std::endl;
-    }
+Task loop(auto id, size_t n) {
+  for (size_t i = 0; i < n; ++i) {
+    std::cerr << "loop { id " << id << " } { i " << i << " } log" << std::endl;
     co_await paddlefish::runtime::sched_yield();
   }
 }
@@ -48,20 +50,20 @@ paddlefish::Future<> exceptional_future() {
 
 paddlefish::Task exceptional_task() {
   throw std::runtime_error("exception from exceptional");
-  // co_return; // This is not necessary
+  co_return;  // This is necessary
 }
 
 paddlefish::Future<> noexceptional() {
   try {
     co_await exceptional_task();
   } catch (std::runtime_error& ex) {
-    std::cout << "exception catched :: OK" << std::endl;
+    std::cerr << "exception catched :: OK" << std::endl;
   }
 
   try {
     co_await exceptional_future();
   } catch (std::runtime_error& ex) {
-    std::cout << "exception catched :: OK" << std::endl;
+    std::cerr << "exception catched :: OK" << std::endl;
   }
 
   co_return {};
@@ -73,15 +75,15 @@ paddlefish::Task check() {
 
 paddlefish::Task sequence() {
   auto f = calculate(20);
-  std::cout << "co_await... ";
+  std::cerr << "co_await... ";
   int v = co_await f;
-  std::cout << " = " << v << std::endl;
-  std::cout << "co_await... ";
+  std::cerr << " = " << v << std::endl;
+  std::cerr << "co_await... ";
   int vv = co_await calculate(40);
-  std::cout << " = " << vv << std::endl;
+  std::cerr << " = " << vv << std::endl;
   auto vvv = co_await allocate(50);
-  std::cout << *vvv << std::endl;
-  std::cout << "Resumed successfully" << std::endl;
+  std::cerr << *vvv << std::endl;
+  std::cerr << "Resumed successfully" << std::endl;
 }
 
 paddlefish::Task concurrent() {
@@ -99,12 +101,17 @@ paddlefish::Task concurrent() {
 void run_test(paddlefish::Task test) {
   static size_t number = 0;
   ++number;
-  std::cerr << "-- Run test " << number << std::endl;
+  std::cout << "-- Run test " << number << std::endl;
   paddlefish::runtime::block_on(std::move(test));
-  std::cerr << "-- End test " << number << std::endl;
+  std::cout << "-- End test " << number << std::endl;
 }
 
 int main() {
   run_test(concurrent());
   run_test(sequence());
+  run_test([]() -> Task {
+    runtime::go(loop(1, 50));
+    runtime::go(loop(24, 50));
+    co_return;
+  }());
 }
