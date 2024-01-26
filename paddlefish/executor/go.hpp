@@ -3,6 +3,7 @@
 #include "executor.hpp"
 
 #include <paddlefish/future/task.hpp>
+#include <paddlefish/future/future.hpp>
 
 namespace paddlefish::runtime {
 
@@ -12,8 +13,13 @@ void go(TaskAlloc<Alloc> f) {
 }
 
 template <class Alloc>
-void block_on(TaskAlloc<Alloc> f) {
-  go(std::move(f));
+void go(Future<Alloc> f) {
+  schedule(std::move(f).into_handle());
+}
+
+template <class F>
+void block_on(F&& f) {
+  go(std::forward<F>(f));
   utilize();
 }
 
