@@ -6,13 +6,13 @@
 
 namespace paddlefish::runtime {
 
-template <class Alloc>
-void go(Future<Unit, Alloc> f) {
+template <class T, class Alloc>
+void go(Future<T, Alloc> f) {
   schedule(std::move(f).into_handle());
 }
 
-template <class Alloc>
-void block_on(Future<Unit, Alloc> f) {
+template <class T, class Alloc>
+void block_on(Future<T, Alloc> f) {
   go(std::move(f));
   utilize();
 }
