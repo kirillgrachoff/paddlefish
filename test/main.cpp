@@ -1,12 +1,10 @@
+#include <cstddef>
 #include <cstdlib>
 #include <iostream>
+#include <stdexcept>
 
 #include <paddlefish/future.hpp>
 #include <paddlefish/runtime.hpp>
-#include <stdexcept>
-
-#include <paddlefish/executor/sched_yield.hpp>
-#include <paddlefish/future/future.hpp>
 
 paddlefish::Future<int> calculate(int value) {
   std::cout << "Calculating " << value;
@@ -17,18 +15,19 @@ paddlefish::Future<std::unique_ptr<int>> allocate(int value) {
   co_return std::make_unique<int>(value);
 }
 
-paddlefish::Task recursive_impl(int start, int n) {
+paddlefish::Task recursive_impl(auto id, int start, int n) {
   if (n == 0) {
-    std::cout << "recursive end: n = " << start << std::endl;
+    std::cout << "recursive { id " << id << " } { n " << n << " } end" << std::endl;
     co_return;
   }
-  co_await recursive_impl(start, n - 1);
+  std::cout << "recursive { id " << id << " } { n " << n << " } log" << std::endl;
+  co_await recursive_impl(id, start, n - 1);
 }
 
 paddlefish::Task recursive(int start) {
   auto id = std::rand();
   std::cout << "recursive { id " << id << " } start" << std::endl;
-  co_await recursive_impl(start, start);
+  co_await recursive_impl(id, start, start);
   std::cout << "recursive { id " << id << " } end" << std::endl;
 }
 
@@ -74,7 +73,6 @@ paddlefish::Task check() {
 
 paddlefish::Task sequence() {
   auto f = calculate(20);
-  paddlefish::runtime::go(recursive(1000));
   std::cout << "co_await... ";
   int v = co_await f;
   std::cout << " = " << v << std::endl;
@@ -84,21 +82,11 @@ paddlefish::Task sequence() {
   auto vvv = co_await allocate(50);
   std::cout << *vvv << std::endl;
   std::cout << "Resumed successfully" << std::endl;
-  std::cout << "Recursive start" << std::endl;
-  co_await recursive(100);
-  std::cout << "Recursive end" << std::endl;
-  std::cout << "Loop start" << std::endl;
-  co_await loop();
-  std::cout << "Loop end" << std::endl;
-  std::cout << "Exceptional start" << std::endl;
-  co_await noexceptional();
-  std::cout << "Exceptional end" << std::endl;
-  co_await check();
 }
 
 paddlefish::Task concurrent() {
-  paddlefish::runtime::go(recursive(100));
-  paddlefish::runtime::go(recursive(100));
+  paddlefish::runtime::go(recursive(32));
+  paddlefish::runtime::go(recursive(25));
   co_return;
 }
 
@@ -108,8 +96,15 @@ paddlefish::Task concurrent() {
 //   auto [a_r, b_r] = paddlefish::when_all(a, b);
 // }
 
+void run_test(paddlefish::Task test) {
+  static size_t number = 0;
+  ++number;
+  std::cerr << "-- Run test " << number << std::endl;
+  paddlefish::runtime::block_on(std::move(test));
+  std::cerr << "-- End test " << number << std::endl;
+}
+
 int main() {
-  std::cout << "Run" << std::endl;
-  paddlefish::runtime::block_on(noexceptional());
-  std::cout << "End" << std::endl;
+  run_test(concurrent());
+  run_test(sequence());
 }
