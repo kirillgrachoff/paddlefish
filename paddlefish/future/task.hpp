@@ -1,38 +1,35 @@
 #pragma once
 
-#include <coroutine>
-#include <type_traits>
-#include <iostream>
+#include <cstddef>
 
 #include <paddlefish/executor/executor.hpp>
+#include <paddlefish/future/fiber.hpp>
 #include <paddlefish/future/final_suspend_awaiter.hpp>
-#include <paddlefish/future/promise.hpp>
-#include <paddlefish/unit.hpp>
 
 namespace paddlefish {
 
-template <class T = Unit, class Alloc = std::allocator<std::byte>>
-class Future {
+template <class Alloc = std::allocator<std::byte>>
+class TaskAlloc {
  public:
-  using PromiseType = Promise<T, Future<T, Alloc>, Alloc>;
+  using PromiseType = Fiber<TaskAlloc<Alloc>, Alloc>;
 
  public:
   using FinalSuspendAwaiter = detail::FinalSuspendAwaiter;
 
  private:
-  explicit Future(PromiseType& promise) : promise_(promise) {
+  explicit TaskAlloc(PromiseType& promise) : promise_(promise) {
   }
 
  public:
-  Future() = delete;
-  Future(const Future&) = delete;
-  Future& operator=(const Future&) = delete;
+  TaskAlloc() = delete;
+  TaskAlloc(const TaskAlloc&) = delete;
+  TaskAlloc& operator=(const TaskAlloc&) = delete;
 
-  Future(Future&&) = default;
-  Future& operator=(Future&&) = default;
+  TaskAlloc(TaskAlloc&&) = default;
+  TaskAlloc& operator=(TaskAlloc&&) = default;
 
-  static Future from_promise(PromiseType& promise) {
-    return Future(promise);
+  static TaskAlloc from_promise(PromiseType& promise) {
+    return TaskAlloc(promise);
   }
 
   std::false_type await_ready() noexcept {
@@ -46,8 +43,8 @@ class Future {
     return paddlefish::runtime::maybe_schedule(promise_handle);
   }
 
-  T await_resume() {
-    return std::move(promise_).get_value();
+  void await_resume() {
+    std::move(promise_).get_void();
   }
 
   decltype(auto) into_handle() && {
@@ -58,14 +55,16 @@ class Future {
   PromiseType& promise_;
 };
 
+using Task = TaskAlloc<>;
+
 }  // namespace paddlefish
 
 namespace std {
 
-template <class T, class Alloc, class... Args>
-struct coroutine_traits<paddlefish::Future<T, Alloc>, Args...> {
+template <class Alloc, class... Args>
+struct coroutine_traits<paddlefish::TaskAlloc<Alloc>, Args...> {
   // NOLINTNEXTLINE
-  using promise_type = typename paddlefish::Future<T, Alloc>::PromiseType;
+  using promise_type = typename paddlefish::TaskAlloc<Alloc>::PromiseType;
 };
 
 }  // namespace std

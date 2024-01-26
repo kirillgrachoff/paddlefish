@@ -2,17 +2,17 @@
 
 #include "executor.hpp"
 
-#include <paddlefish/future/future.hpp>
+#include <paddlefish/future/task.hpp>
 
 namespace paddlefish::runtime {
 
-template <class T, class Alloc>
-void go(Future<T, Alloc> f) {
+template <class Alloc>
+void go(TaskAlloc<Alloc> f) {
   schedule(std::move(f).into_handle());
 }
 
-template <class T, class Alloc>
-void block_on(Future<T, Alloc> f) {
+template <class Alloc>
+void block_on(TaskAlloc<Alloc> f) {
   go(std::move(f));
   utilize();
 }
