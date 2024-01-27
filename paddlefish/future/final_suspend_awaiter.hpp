@@ -3,9 +3,7 @@
 #include <coroutine>
 #include <type_traits>
 
-namespace paddlefish {
-
-namespace detail {
+namespace paddlefish::detail {
 
 struct FinalSuspendAwaiter {
   std::false_type await_ready() noexcept {
@@ -22,6 +20,4 @@ struct FinalSuspendAwaiter {
   std::coroutine_handle<> caller = std::noop_coroutine();
 };
 
-}  // namespace detail
-
-}
+}  // namespace paddlefish::detail
