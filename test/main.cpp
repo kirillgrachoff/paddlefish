@@ -5,6 +5,7 @@
 
 #include <paddlefish/future.hpp>
 #include <paddlefish/runtime.hpp>
+#include <paddlefish/future/when_all.hpp>
 
 using namespace paddlefish;  // NOLINT
 
@@ -35,11 +36,12 @@ Task recursive(int start) {
   std::cerr << "recursive { id " << id << " } end" << std::endl;
 }
 
-Task loop(auto id, size_t n) {
+Future<> loop(auto id, size_t n) {
   for (size_t i = 0; i < n; ++i) {
     std::cerr << "loop { id " << id << " } { i " << i << " } log" << std::endl;
     co_await runtime::sched_yield();
   }
+  co_return {};
 }
 
 Future<> exceptional_future() {
@@ -92,11 +94,15 @@ Task concurrent() {
   co_return;
 }
 
-// Future<> parallel() {
-//   auto a = calculate(10);
-//   auto b = calculate(20);
-//   auto [a_r, b_r] = when_all(a, b);
-// }
+Task parallel() {
+  auto [a_r, b_r] = co_await when_all(calculate(10), calculate(20));
+  std::cerr << std::endl;
+  std::cerr << "10 + 20 = " << a_r + b_r << std::endl;
+}
+
+Task parallel_loop() {
+  std::tie(std::ignore, std::ignore) = co_await when_all(loop(10, 30), loop(20, 20));
+}
 
 void run_test(Task test) {
   static size_t number = 0;
@@ -114,4 +120,6 @@ int main() {
     runtime::go(loop(24, 50));
     co_return;
   }());
+  run_test(parallel());
+  run_test(parallel_loop());
 }
